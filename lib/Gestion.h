@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define PROP_FILE	"../Config.cfg"
+#define PROP_FILE	"../config.cfg"
 
 char* getProp(const char *fileName, const char *propName);
 
