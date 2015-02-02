@@ -7,6 +7,7 @@ int main()
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
 	pid_t child_pid;
 
+	// Création des bateaux
 	for (i = 0; i < nb_boats; i++)
 	{
 		if ((child_pid = fork()) < 0)
@@ -21,6 +22,21 @@ int main()
 			execl("Bateau", "BOAT", NULL);
 		}
 	}
+
+	// Création des ports
+	for (i = 0; i < nb_ports; i++)
+	{
+		if ((child_pid = fork()) < 0)
+		{
+			perror("fork failure");
+			exit(1);
+		}
+
+		if (child_pid == 0)
+		{
+			execl("Port", "PORT", NULL);
+		}
+	}	
 
 	return EXIT_SUCCESS;
 }
