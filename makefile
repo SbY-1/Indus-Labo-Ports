@@ -14,7 +14,7 @@ OBJS = $(OBJGEST) $(OBJPORT) $(OBJDOCK) $(OBJBOAT) $(OBJVEHI)
 
 CFLAGS = $(INCLUDES)
 INCLUDES = -I $(LIB)
-LDFLAGS = -lpthread -lrt
+LDFLAGS = -lrt
 CC = gcc
 LD = gcc
 
@@ -39,10 +39,6 @@ $(BINDIR)/Boat: $(OBJBOAT)
 $(BINDIR)/GenVehicle: $(OBJVEHI)
 	@echo "=> Creating $@"
 	$(LD) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-
-$(OBJ)/Gestion.o: $(SRC)/Gestion.c
-	@echo ">> Creating $@"
-	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ)/Gestion.o: $(SRC)/Gestion.c
 	@echo ">> Creating $@"

@@ -5,8 +5,15 @@ int main()
 	int i;
 	int nb_ports = atoi(getProp(PROP_FILE, "nb_ports"));
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
+	char* ports_name[] = {"Dunkerque", "Calais", "Douvre"};
 	pid_t child_pid;
 
+	// Création des ressources nécessaires
+	// MUTEX_BATEAU
+
+	// SHM_BATEAU
+
+	// Création des bateaux
 	for (i = 0; i < nb_boats; i++)
 	{
 		if ((child_pid = fork()) < 0)
@@ -18,7 +25,23 @@ int main()
 		if (child_pid == 0)
 		{
 			printf("Création d'un bateau\n");
-			execl("Bateau", "BOAT", NULL);
+			execl("Boat", "BOAT", NULL);
+		}
+	}
+
+	// Création des ports
+	for (i = 0; i < nb_ports; i++)
+	{
+		if ((child_pid = fork()) < 0)
+		{
+			perror("fork failure");
+			exit(1);
+		}
+
+		if (child_pid == 0)
+		{
+			printf("Création d'un port\n");
+			execl("Port", "PORT", ports_name[i], NULL);
 		}
 	}
 

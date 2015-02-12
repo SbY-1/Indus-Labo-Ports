@@ -5,7 +5,11 @@ int main()
 	int i;
 	int nb_ports = atoi(getProp(PROP_FILE, "nb_ports"));
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
+	char* ports_name[] = {"Dunkerque", "Calais", "Douvre"};
 	pid_t child_pid;
+
+	// Création des ressources nécessaires
+	// MUTEX_BATEAU
 
 	// Création des bateaux
 	for (i = 0; i < nb_boats; i++)
@@ -19,7 +23,7 @@ int main()
 		if (child_pid == 0)
 		{
 			printf("Création d'un bateau\n");
-			execl("Bateau", "BOAT", NULL);
+			execl("Boat", "BOAT", NULL);
 		}
 	}
 
@@ -34,9 +38,10 @@ int main()
 
 		if (child_pid == 0)
 		{
-			execl("Port", "PORT", NULL);
+			printf("Création d'un port\n");
+			execl("Port", "PORT", ports_name[i], NULL);
 		}
-	}	
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -52,7 +57,7 @@ char* getProp(const char *fileName, const char *propName)
 
 	if ((file = fopen(fileName, "r")) == NULL)
 	{
-		perror("Openning file\n");
+		perror("Opening file\n");
 		exit(errno);
 	}
 	else
