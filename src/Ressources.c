@@ -3,7 +3,7 @@
 /**************/
 /* Semaphores */
 /**************/
-void ouvertureSemaphore(Semaphore *sem)
+void open_sem(Semaphore *sem)
 {
 	if ((sem->p_sem = sem_open(sem->semname, sem->oflag, sem->mode, sem->value)) == SEM_FAILED)
 	{
@@ -12,16 +12,17 @@ void ouvertureSemaphore(Semaphore *sem)
 	}
 }
 
-void waitSem(Semaphore sem)
+void wait_sem(Semaphore sem)
 {
     if (sem_wait(sem.p_sem) == -1)
     {
         perror("sem_wait");
         exit(errno);
     }
+
 }
 
-void signalSem(Semaphore sem)
+void signal_sem(Semaphore sem)
 {
     if (sem_post(sem.p_sem) == -1)
     {
@@ -30,7 +31,7 @@ void signalSem(Semaphore sem)
     }
 }
 
-void fermetureSemaphore(Semaphore sem)
+void close_sem(Semaphore sem)
 {
     if (sem_close(sem.p_sem) == -1)
     {
@@ -39,9 +40,9 @@ void fermetureSemaphore(Semaphore sem)
     }
 }
 
-void destructionSemaphore(Semaphore sem)
+void destroy_sem(Semaphore sem)
 {
-	fermetureSemaphore(sem);
+	close_sem(sem);
 
     // Le semaphore nomme n'existe plus dans l'OS
     if (sem_unlink(sem.semname) == -1)
@@ -54,19 +55,19 @@ void destructionSemaphore(Semaphore sem)
 /**************/
 /*    Signal  */
 /**************/
-void armerSignal(struct sigaction *act, int signal)
+/*void armerSignal(struct sigaction *act, int signal)
 {
     if(sigaction(signal, act, 0) == -1)
 	{
         perror("sigaction error");
         exit(errno);
     }
-}
+}*/
 
 /**************/
 /*    Shm     */
 /**************/
-void ouvertureMemoirePartagee(Shm *memPartagee)
+void open_shm(Shm *memPartagee)
 {
 	// Creation de la memoire partagee
 	if ((memPartagee->fdShm = shm_open(memPartagee->shmName, memPartagee->mode, 0)) == -1)
@@ -90,7 +91,7 @@ void ouvertureMemoirePartagee(Shm *memPartagee)
 	}
 }
 
-void mappingMemoirePartagee(Shm *memPartagee, size_t size)
+void mapping_shm(Shm *memPartagee, size_t size)
 {
 	// Mapping de la memoire partagee
 	if ((memPartagee->pShm = mmap(0, size, (PROT_WRITE | PROT_READ), MAP_SHARED, memPartagee->fdShm, 0)) == MAP_FAILED)
@@ -100,7 +101,7 @@ void mappingMemoirePartagee(Shm *memPartagee, size_t size)
     }
 }
 
-void fermetureMemoiePartagee(Shm memPartagee)
+void close_shm(Shm memPartagee)
 {
 	if (shm_unlink(memPartagee.shmName) == -1)
 	{
@@ -112,7 +113,7 @@ void fermetureMemoiePartagee(Shm memPartagee)
 /**************/
 /*    Mq      */
 /**************/
-void ouvertureMessageQueue(MessageQueue *mq, struct mq_attr attr)
+void open_mq(MessageQueue *mq, struct mq_attr attr)
 {
 	if ((mq->mq = mq_open(mq->name, mq->oflag, mq->mode, &attr)) == -1)
 	{
@@ -121,7 +122,7 @@ void ouvertureMessageQueue(MessageQueue *mq, struct mq_attr attr)
 	}
 }
 
-void fermetureMessageQueue(MessageQueue mq)
+void close_mq(MessageQueue mq)
 {
 	if (mq_close(mq.mq) == -1)
 	{
@@ -136,7 +137,7 @@ void fermetureMessageQueue(MessageQueue mq)
 	}
 }
 
-void envoieMessage(mqd_t msgq,const char * message,int taille,unsigned int msg_prio)
+void send_mq(mqd_t msgq,const char * message,int taille,unsigned int msg_prio)
 {
 	if (mq_send(msgq,message,taille,msg_prio) == -1)
 	{
@@ -145,7 +146,7 @@ void envoieMessage(mqd_t msgq,const char * message,int taille,unsigned int msg_p
 	}
 }
 
-int receptionMessage(mqd_t msgq,char * message,int taille,unsigned int *msg_prio)
+int recv_mq(mqd_t msgq,char * message,int taille,unsigned int *msg_prio)
 {	
 	return mq_receive(msgq,message,taille, msg_prio);
 }

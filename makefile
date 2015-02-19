@@ -5,6 +5,7 @@ OBJ      = obj
 
 BINS = $(BINDIR)/Gestion $(BINDIR)/Port $(BINDIR)/Dock $(BINDIR)/Boat $(BINDIR)/GenVehicle
 
+OBJRESS = $(OBJ)/Ressources.o
 OBJGEST = $(OBJ)/Gestion.o
 OBJPORT = $(OBJ)/Port.o
 OBJDOCK = $(OBJ)/Dock.o
@@ -14,15 +15,19 @@ OBJS = $(OBJGEST) $(OBJPORT) $(OBJDOCK) $(OBJBOAT) $(OBJVEHI)
 
 CFLAGS = $(INCLUDES)
 INCLUDES = -I $(LIB)
-LDFLAGS = -lrt
+LDFLAGS = -lrt -pthread
 CC = gcc
 LD = gcc
 
 all: $(BINS)
 
+$(OBJ)/Ressources.o: $(SRC)/Ressources.c
+	@echo ">> Creating $@"
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(BINDIR)/Gestion:	$(OBJGEST)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
 
 $(BINDIR)/Port:	$(OBJPORT)
 	@echo "=> Creating $@"
@@ -34,7 +39,7 @@ $(BINDIR)/Dock: $(OBJDOCK)
 
 $(BINDIR)/Boat: $(OBJBOAT)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
 
 $(BINDIR)/GenVehicle: $(OBJVEHI)
 	@echo "=> Creating $@"
