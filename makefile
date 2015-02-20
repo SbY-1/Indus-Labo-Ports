@@ -31,7 +31,7 @@ $(BINDIR)/Gestion:	$(OBJGEST)
 
 $(BINDIR)/Port:	$(OBJPORT)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
 
 $(BINDIR)/Dock: $(OBJDOCK)
 	@echo "=> Creating $@"

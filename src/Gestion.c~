@@ -6,7 +6,7 @@ int main()
 	int stop = 0;
 	int nb_ports = atoi(getProp(PROP_FILE, "nb_ports"));
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
-	char* ports_name[] = {"Dunkerque", "Calais", "Douvre"};
+	char* ports_name[] = {"Douvre", "Calais", "Dunkerque"};
 	pid_t child_pid;
 
 	printf("Nb_boats : %d \n", nb_boats);
@@ -50,14 +50,13 @@ int main()
 
 		if (child_pid == 0)
 		{
-			char p[2];
+			char* p;
 			sprintf(p, "%d", i);
-			printf("Création d'un bateau - %s\n", p);
 			execl("Boat", "BOAT", p, NULL);
 		}
 	}
 
-	/*
+	
 	// Création des ports
 	for (i = 0; i < nb_ports; i++)
 	{
@@ -69,12 +68,9 @@ int main()
 
 		if (child_pid == 0)
 		{
-			printf("Création d'un port\n");
 			execl("Port", "PORT", ports_name[i], NULL);
 		}
-	}*/
-	
-	sleep(1);
+	}
 
 	// Lecture des données
 	Boat tmpBoat;

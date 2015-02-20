@@ -10,8 +10,6 @@
 //#include "Ressources.h"
 #include "Common.h"
 
-#define PROP_FILE	"../Config.cfg"
-
 char* getProp(const char *fileName, const char *propName);
 void init_ressources(int nb_boats);
 
