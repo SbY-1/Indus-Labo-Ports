@@ -16,6 +16,37 @@ int main(int argc, char** argv)
 	int cpt_arr = 0;
 	int cpt_dep = 0;
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
+  int nb_docks = 0;
+  pid_t child_pid;
+  int i = 0;
+  sscanf(argv[2], "%d", &nb_docks);
+
+	// Création des quais
+	for (; i < nb_docks; i++)
+	{
+		if ((child_pid = fork()) < 0)
+		{
+			perror("fork failure");
+			exit(1);
+		}
+
+		if (child_pid == 0)
+		{
+			execl("Dock", "DOCK", argv[1], NULL);
+		}
+	}
+
+	// Création des quais
+
+	if ((child_pid = fork()) < 0)
+	{
+		perror("fork failure");
+		exit(1);
+	}
+	if (child_pid == 0)
+	{
+		execl("GenVehicle", "GENVEHICLE", argv[1], NULL);
+	}
 
 	// MUTEX_BATEAU
 	mutex_boat.oflag = O_RDWR;

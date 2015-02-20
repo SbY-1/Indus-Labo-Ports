@@ -1,6 +1,7 @@
 #include "GenVehicle.h"
 
-int main()
+int main(int argc, char** argv)
 {
-	printf("GenVehicle\n");
+  printf("NOM DU PORT : %s\n", argv[1]);
+  return 0;
 }

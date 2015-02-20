@@ -50,7 +50,7 @@ int main()
 
 		if (child_pid == 0)
 		{
-			char* p;
+			char* p = malloc(sizeof(p));
 			sprintf(p, "%d", i);
 			execl("Boat", "BOAT", p, NULL);
 		}
@@ -68,7 +68,10 @@ int main()
 
 		if (child_pid == 0)
 		{
-			execl("Port", "PORT", ports_name[i], NULL);
+		  char* p = malloc(sizeof(p));
+		  sprintf(p, "%d", (i == 0) ? 3 : 2);
+		  printf("docks : %d", nb_docks);
+			execl("Port", "PORT", ports_name[i], p, NULL);
 		}
 	}
 

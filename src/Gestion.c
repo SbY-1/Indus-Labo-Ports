@@ -68,7 +68,9 @@ int main()
 
 		if (child_pid == 0)
 		{
-			execl("Port", "PORT", ports_name[i], NULL);
+		  char* p = malloc(sizeof(p));
+		  sprintf(p, "%d", (i == 0) ? 3 : 2);
+			execl("Port", "PORT", ports_name[i], p, NULL);
 		}
 	}
 
