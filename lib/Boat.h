@@ -10,6 +10,8 @@
 #include "Ressources.h"
 #include "Common.h"
 
+void init_ressources(Semaphore* mutex_sync, Semaphore* mutex_boat, Shm* shm_boat, int index);
+void open_port_ressources(Semaphore* sem_port, Semaphore* mutex_dep, Semaphore* mutex_arr, Shm* shm_dep, Shm* shm_arr, char* port_name);
 void handler(int sig);
 void print_boat(int index, char* msg);
 

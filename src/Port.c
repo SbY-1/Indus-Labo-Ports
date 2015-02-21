@@ -12,17 +12,18 @@ int main(int argc, char** argv)
 	Shm shm_dep;
 	Shm shm_arr; 
 	Shm shm_boat;
+	Shm shm_dock;
 	Boat boat;
 	int cpt_arr = 0;
 	int cpt_dep = 0;
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
-  int nb_docks = 0;
-  pid_t child_pid;
-  int i = 0;
-  sscanf(argv[2], "%d", &nb_docks);
+ 	int nb_docks = 0;
+  	pid_t child_pid;
+  	int i;
+  	sscanf(argv[2], "%d", &nb_docks);
 
 	// Création des quais
-	for (; i < nb_docks; i++)
+	for (i = 0; i < nb_docks; i++)
 	{
 		if ((child_pid = fork()) < 0)
 		{
@@ -32,11 +33,15 @@ int main(int argc, char** argv)
 
 		if (child_pid == 0)
 		{
-			execl("Dock", "DOCK", argv[1], NULL);
+			char* p = malloc(sizeof(p));
+			char* d = malloc(sizeof(d));
+			sprintf(p, "%d", i);
+			sprintf(d, "%d", nb_docks);
+			execl("Dock", "DOCK", argv[1], p, d, NULL);
 		}
 	}
 
-	// Création des quais
+	// Création de GenVehicle
 
 	if ((child_pid = fork()) < 0)
 	{
@@ -78,6 +83,12 @@ int main(int argc, char** argv)
     mutex_arr.value = 1;
     sprintf(mutex_arr.semname,"%s%s", MUTEX_ARR, argv[1]);	
 
+	// MUTEX_DOCK
+	mutex_dock.oflag = (O_CREAT | O_RDWR);
+    mutex_dock.mode  = 0644;
+    mutex_dock.value = 1;
+    sprintf(mutex_dock.semname,"%s%s", MUTEX_DOCK, argv[1]);
+
 	// SHM_DEP
 	shm_dep.sizeofShm = sizeof(int);
 	shm_dep.mode = O_CREAT | O_RDWR;
@@ -88,23 +99,33 @@ int main(int argc, char** argv)
 	shm_arr.mode = O_CREAT | O_RDWR;
 	sprintf(shm_arr.shmName,"%s%s", SHM_ARR, argv[1]);
 
+	// SHM_DOCK
+	shm_dock.sizeofShm = sizeof(Dock) * nb_docks;
+	shm_dock.mode = O_CREAT | O_RDWR;
+	sprintf(shm_dock.shmName,"%s%s", SHM_DOCK, argv[1]);
+
 	shm_boat.sizeofShm = sizeof(Boat) * nb_boats;
 	shm_boat.mode = O_RDWR;
 	strcpy(shm_boat.shmName, SHM_BOAT);
-
-	open_shm(&shm_boat);
-	mapping_shm(&shm_boat, sizeof(Boat) * nb_boats);
 
 	sem_unlink(sem_port.semname);
 	sem_unlink(mutex_dep.semname);
 	sem_unlink(mutex_dock.semname);
 	sem_unlink(mutex_arr.semname);
+	sem_unlink(mutex_dock.semname);
 
 	open_sem(&sem_port);
 	open_sem(&mutex_dep);
 	open_sem(&mutex_dock);
 	open_sem(&mutex_arr);
 	open_sem(&mutex_boat);
+	open_sem(&mutex_dock);
+
+	open_shm(&shm_boat);
+	mapping_shm(&shm_boat, sizeof(Boat) * nb_boats);
+
+	open_shm(&shm_dock);
+	mapping_shm(&shm_dock, sizeof(Dock) * nb_docks);
 
 	open_shm(&shm_dep);
 	mapping_shm(&shm_dep, sizeof(int));
@@ -145,7 +166,7 @@ int main(int argc, char** argv)
 
 			signal_sem(mutex_dep);
 
-			// TODO Envoie d'un signal au bateau
+			// Envoie d'un signal au bateau
 			//kill(boat.pid, SIGUSR2);
 			mutex_sync.oflag = O_RDWR;
 			mutex_sync.mode  = 0644;
@@ -158,44 +179,62 @@ int main(int argc, char** argv)
 			close_sem(mutex_sync);
 		}
 		else
+		{
 			signal_sem(mutex_dep);
 
-		// TODO Reservation du quai
-		//sleep(2);
-
-		// Compteur d'arrivée
-		wait_sem(mutex_arr);
-		memcpy(&cpt_arr, shm_arr.pShm, sizeof(int));
-		if (cpt_arr > 0)
-		{
 			// Recherche du bateau
 			wait_sem(mutex_boat);
 			boat = get_actual_boat(ENTERS_PORT, argv[1], nb_boats, shm_boat);
 			signal_sem(mutex_boat);
 
-			printf("Port %s > Bateau %d entre\n", argv[1], boat.pid);
+			printf("Port %s > Réservation pour le bateau %d\n", argv[1], boat.index);
+
+			// TODO Reservation du quai
+			int found = 0;
+			wait_sem(mutex_dock);
+			for (i = 0; i < nb_docks && !found; i++)
+			{
+				Dock tmpDock;
+				memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
+				printf("Port %s > Bateau - %d Quai %d - %d\n", argv[1], boat.index, tmpDock.index, tmpDock.boat_index);
+				// Recherche du premier quai disponible
+				if (tmpDock.boat_index == -1)
+				{
+					tmpDock.boat_index = boat.index;
+					memcpy(shm_dock.pShm + (i * sizeof(Dock)), &tmpDock, sizeof(Dock));
+					found = 1;
+				}
+			}
+			signal_sem(mutex_dock);
+
+			// Compteur d'arrivée
+			wait_sem(mutex_arr);
+			memcpy(&cpt_arr, shm_arr.pShm, sizeof(int));
+			if (cpt_arr > 0)
+			{
+				printf("Port %s > Bateau %d entre\n", argv[1], boat.pid);
 			
-			// Décrémente le compteur
-			cpt_arr--;
-			memcpy(shm_arr.pShm, &cpt_arr, sizeof(int));
+				// Décrémente le compteur
+				cpt_arr--;
+				memcpy(shm_arr.pShm, &cpt_arr, sizeof(int));
 
-			signal_sem(mutex_arr);
+				signal_sem(mutex_arr);
 
-			// TODO Envoie d'un signal au bateau
-			//kill(boat.pid, SIGUSR1);
-			mutex_sync.oflag = O_RDWR;
-			mutex_sync.mode  = 0644;
-			mutex_sync.value = 1;
-			sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
+				// Envoie d'un signal au bateau
+				//kill(boat.pid, SIGUSR1);
+				mutex_sync.oflag = O_RDWR;
+				mutex_sync.mode  = 0644;
+				mutex_sync.value = 1;
+				sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
 
-			open_sem(&mutex_sync);
-			sleep(1);
-			signal_sem(mutex_sync);
-			close_sem(mutex_sync);
+				open_sem(&mutex_sync);
+				sleep(1);
+				signal_sem(mutex_sync);
+				close_sem(mutex_sync);
+			}
+			else
+				signal_sem(mutex_arr);
 		}
-		else
-			signal_sem(mutex_arr);
-
 	}
 
 	return EXIT_SUCCESS;
@@ -203,34 +242,33 @@ int main(int argc, char** argv)
 
 Boat get_actual_boat(boat_p position, char* port, int nb_boats, Shm shm_boat)
 {
-	// TODO Parcours de la shm pour trouver le batau concerné
+	// Parcours de la shm pour trouver le bateau concerné
 	int i;
 	int found;
 	char* ports_name[] = {"Douvre", "Calais", "Dunkerque"};
-	Boat tmp;
+	Boat *tmp = malloc(sizeof(Boat));
 	boat_d direction;
 
+	// Recherche le nom du port pour l'enum
 	for (i = 0, found = 0; i < 3 && !found; i++)
 	{
 		if (strcmp(port, ports_name[i]) == 0)
 		{
 			found = 1;
 			direction = i + 1;
-			printf("Port %s > Nom port %d\n", port, direction);
 		}
 	}
 
+	// Recherche le bateau aux portes du port
 	for (i = 0, found = 0; i < nb_boats && !found; i++)
 	{
-		memcpy(&tmp, shm_boat.pShm + (i * sizeof(Boat)), sizeof(Boat));
-		if (tmp.position == position && tmp.direction == direction)
-		{
+		memcpy(tmp, shm_boat.pShm + (i * sizeof(Boat)), sizeof(Boat));
+		printf("Recherche: Bateau : %d - Port %d - Position %d\n", tmp->index, tmp->direction, tmp->position);
+		if (tmp->position == position && tmp->direction == direction)
 			found = 1;
-			printf("Port %s > Bateau trouve %d\n", port, tmp.pid);
-		}
 	}	
 	
-	return tmp;
+	return *tmp;
 }
 
 char* getProp(const char *fileName, const char *propName)
@@ -277,8 +315,3 @@ char* getProp(const char *fileName, const char *propName)
 	fclose(file);
 	return NULL;
 }
-
-
-
-
-

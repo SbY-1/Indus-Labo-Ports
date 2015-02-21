@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
+#include <string.h>
 
 #include "Common.h"
 #include "Ressources.h"

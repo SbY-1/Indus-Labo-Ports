@@ -84,7 +84,7 @@ int main()
 			memcpy(&tmpBoat, shm_boat.pShm + (i * sizeof(Boat)), sizeof(Boat));
 			if (tmpBoat.state_changed == 1)
 			{
-				printf("Boat %d - pid = %d - position : %d - direction %d - state %d\n", i, tmpBoat.pid, tmpBoat.position, tmpBoat.direction, tmpBoat.state_changed);
+				//printf("Boat %d - pid = %d - position : %d - direction %d - state %d\n", i, tmpBoat.pid, tmpBoat.position, tmpBoat.direction, tmpBoat.state_changed);
 
 				tmpBoat.state_changed = 0;
 				memcpy(shm_boat.pShm + (i * sizeof(Boat)), &tmpBoat, sizeof(Boat));

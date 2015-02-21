@@ -35,7 +35,7 @@ $(BINDIR)/Port:	$(OBJPORT)
 
 $(BINDIR)/Dock: $(OBJDOCK)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
 
 $(BINDIR)/Boat: $(OBJBOAT)
 	@echo "=> Creating $@"

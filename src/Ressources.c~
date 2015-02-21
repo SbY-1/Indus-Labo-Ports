@@ -8,23 +8,18 @@ void open_sem(Semaphore *sem)
 	if ((sem->p_sem = sem_open(sem->semname, sem->oflag, sem->mode, sem->value)) == SEM_FAILED)
 	{
 		perror("Semaphore initialisation");
+		printf("%s \n", sem->semname);
 		exit(errno);
 	}
-	else
-		printf("Sem créée\n");
 }
 
 void wait_sem(Semaphore sem)
 {
-	printf("Test de wait\n");
     if (sem_wait(sem.p_sem) == -1)
     {
-		printf("fail de sem opn\n");
         perror("sem_wait");
         exit(errno);
     }
-	else
-		printf("Sem ok\n");
 
 }
 
