@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
 				// Simulation de la traversée
 				int duration = rand() % (30 - 15 + 1) + 15;
-				sprintf(msg, "Traversée vers %s (%d secondes)\n", port_name, duration);
+				sprintf(msg, "Traversée vers %s (%d secondes)", port_name, duration);
 				print_boat(index, msg);
 				sleep(duration);
 
@@ -113,25 +113,13 @@ int main(int argc, char* argv[])
 				break;
 			}
 			case DOCK:
+			{
+				int nb_docks = (strcmp(port_name, "Douvre") == 0) ? 3 : 2;
 				sprintf(msg, "Debut Embarquement");
 				print_boat(index, msg);
 
 				// Création ressouces du quai
-				mutex_dock.oflag = O_RDWR;
-				mutex_dock.mode  = 0644;
-				mutex_dock.value = 1;
-			    sprintf(mutex_dock.semname,"%s%s", MUTEX_DOCK, port_name);
-
-				open_sem(&mutex_dock);
-
-				// SHM_DOCK
-				int nb_docks = (strcmp(port_name, "Douvre") == 0) ? 3 : 2;
-				shm_dock.sizeofShm = sizeof(Dock) * nb_docks;
-				shm_dock.mode = O_RDWR;
-				sprintf(shm_dock.shmName,"%s%s", SHM_DOCK, port_name);
-
-				open_shm(&shm_dock);
-				mapping_shm(&shm_dock, sizeof(Dock) * nb_docks);
+				open_dock_ressources(&mutex_dock, &shm_dock, port_name, nb_docks);
 
 				// Recherche de l'id du quai				
 				int i;
@@ -172,6 +160,7 @@ int main(int argc, char* argv[])
 				print_boat(index, msg);
 				boat.position = LEAVES_PORT;
 				break;
+			}
 			case LEAVES_PORT:
 
 				wait_sem(mutex_dep);
@@ -235,7 +224,6 @@ void init_ressources(Semaphore* mutex_sync, Semaphore* mutex_boat, Shm* shm_boat
 
 void open_port_ressources(Semaphore* sem_port, Semaphore* mutex_dep, Semaphore* mutex_arr, Shm* shm_dep, Shm* shm_arr, char* port_name)
 {
-
 	sem_port->oflag = O_RDWR;
 	sem_port->mode  = 0644;
 	sem_port->value = 0;
@@ -272,6 +260,24 @@ void open_port_ressources(Semaphore* sem_port, Semaphore* mutex_dep, Semaphore* 
 
 	open_shm(shm_arr);
 	mapping_shm(shm_arr, sizeof(int));
+}
+
+void open_dock_ressources(Semaphore* mutex_dock, Shm* shm_dock, char* port_name, int nb_docks)
+{
+	mutex_dock->oflag = O_RDWR;
+	mutex_dock->mode  = 0644;
+	mutex_dock->value = 1;
+	sprintf(mutex_dock->semname,"%s%s", MUTEX_DOCK, port_name);
+
+	open_sem(mutex_dock);
+
+	// SHM_DOCK
+	shm_dock->sizeofShm = sizeof(Dock) * nb_docks;
+	shm_dock->mode = O_RDWR;
+	sprintf(shm_dock->shmName,"%s%s", SHM_DOCK, port_name);
+
+	open_shm(shm_dock);
+	mapping_shm(shm_dock, sizeof(Dock) * nb_docks);
 }
 
 void print_boat(int index, char* msg)
