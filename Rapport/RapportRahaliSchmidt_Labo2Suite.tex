@@ -126,7 +126,7 @@ Haute Ecole de la Province de Liège
 	
 \section{Structures de données}
 	Pour ce projet, nous avons défini deux structures de données: Une pour les bateaux et une pour les quais. Ces structures seront contenues dans des mémoire partagées accessibles par tous les processus.
-	\subsection{Structure pour les bateaux}
+	\subsection{Structure pour les bateaux} \label{struct_boat}
 		\lstinputlisting[language=C, firstline=21, lastline=33]{../lib/Common.h}
 		Dans un premier temps, on a défini deux énumération pour la direction ainsi que la position du bateau. Ces énumération seront utilisées dans la structure. Par rapport au point de vue théorique, nous avons rajouté deux données: l'index du bateau ainsi qu'un indicateur pour savoir si les données ont été modifiées ou pas. Cette données est uniquement utilisées pour l'affichage et n'a donc pas grand intérêt. La mémoire partagée aura une taille égale à 6 fois la taille de cette structure.
 	\subsection{Structure pour les quais}
@@ -139,14 +139,84 @@ Haute Ecole de la Province de Liège
 		
 			\lstinputlisting[language=C, firstline=43, lastline=75]{../src/Gestion.c}
 	\subsection{Processus Bateau}
-	
+		Le rôle du bateau dans un premier temps est d'initialiser sa propre structure contenue dans la mémoire partagée des bateaux avec une position au milieu de la mer. On a vu au point \ref{struct_boat} que l'énumération des directions contenait une valeur supplémentaire: UNDEFINED qui sera utilisée pour initialiser la direction du bateau. 
+		
+		Une fois l'initialisation terminée, on rentre dans la boucle qui va lire l'état du bateau dans la mémoire partagée et va effectuer une série de tâche en fonction de sa position. 
+		\lstinputlisting[language=C, firstline=52, lastline=54]{../src/Boat.c}	
+		L'index correspondant à l'identifiant du bateau. Il permet de récupérer la structure correspondant à ce dit bateau. Quand les différentes modifications en fonction de la position du bateau, une mise à jour de la structure de la mémoire partagée est effectuée.
+		\subsubsection{Au milieu de l'eau}
+			\lstinputlisting[language=C, firstline=68, lastline=82]{../src/Boat.c}
+			S'il s'agit du premier voyage, on définit une destination aléatoirement. Par contre si ce n'est pas le premier voyage, les bateaux venant de France (Calais ou Dunkerque) doivent impérativement aller vers Douvre. Au contraire s'ils proviennent d'Angleterre, une destination est tiré de manière aléatoire entre Calais et Dunkerque. On effectue ensuite une simulation de la traversée.
+		\subsubsection{Entrée dans le port}
+			\lstinputlisting[language=C, firstline=94, lastline=108]{../src/Boat.c}
+			Lorsque le bateau arrive à l'entrée d'un port, il doit prévenir le port et incrémenté le compteur d'arrivée de ce port. Tout d'abord il doit récupérer le mutex et la mémoire partagée appartenant à ce port. Pour cela on utilise le nom du port qui est stocké dans la structure du bateau et on reconstruit le nom du mutex concerné. Le même travaille est effectué pour la mémoire partagée et le sémaphore permettant d'avertir le port d'une arrivée.	
+			
+			Le bateau doit ensuite attendre l'autorisation du port pour pouvoir rentrer. Cette synchronisation se fait grâce à un sémaphore débloquer par le port.
+		
+		\subsubsection{A quai}
+			%
+			%	TODO
+			%
+		
+		\subsubsection{Sortie du port}
+			\lstinputlisting[language=C, firstline=166, lastline=177]{../src/Boat.c}
+			La sortie dun port se fait exactement de la même manière que l'entrée à la différence qu'ici on incrémente le compteur de départ du port. Il faut donc récupérer les ressources correspondantes.
 	\subsection{Processus Port}
-	
+		Les ports commencent par la création des ressources qui leur sont propres et initialisent les compteurs de départ et d'arrivée à zéro. Ils créent également deux ou trois quais en fonction du port qu'ils représentent ainsi que processus permettant de générer un embarquement/débarquement de véhicules. Pour la création des processus fils, on utilise la même méthode que pour la création des processus depuis le processus Gestion: C'est-à-dire une combinaison de fork() et de execl. On passe en paramètres aux processus Quai le nom du port ainsi que l'index du quai. Ces informations seront utiles pour créer des ressources uniques.
+		
+		Ils se mettent ensuite dans l'attente d'un bateau grâce à une sémaphore initialisée à zéro également: 
+		\lstinputlisting[language=C, firstline=45, lastline=47]{../src/Port.c}
+		
+		Quand le processus Port est débloqué, il commence par traité les départs des bateaux si il y'en a. Il va devoir lire le compteur de départ écrit dans une mémoire partagée. Si des bateaux désirent quitter, il doit décrémenter le compteur et avertir le bateau concerné qu'il peut quitter le port. 
+		\lstinputlisting[language=C, firstline=52, lastline=78]{../src/Port.c}
+		
+		Sinon il aucun bateau n'est prêt à quitter, c'est qu'un bateau est sur le point d'entrer. Il faut donc lui trouver un quai libre auquel il peut venir accoster et il faut ensuite décrémenter le compteur d'arrivée et lui prévenir d'entrer. Quand le quai est réservé, le numéro du bateau est placé dans la structure du quai en question. Le bateau devra allé lire la mémoire partagée du port contenant l'ensemble des quais pour savoir quel quai lui est destiné.
+		\lstinputlisting[language=C, firstline=90, lastline=106]{../src/Port.c}
+		
+		Il ne reste plus qu'à s'occuper des entrées après la réservation du quai et prévenir le bateau qu'il peut entrer.
+			
 	\subsection{Processus Quai}
+			%
+			%	TODO
+			%
 	
 	\subsection{Processus GenVehicle}
+			%
+			%	TODO
+			%
+\section{Test du programme}
+			%
+			%	TODO
+			%
+\section{Code source}
+	\subsection{Config.cfg}
+		\lstinputlisting[language=C]{../Config.cfg}
+	\subsection{Common.h}
+		\lstinputlisting[language=C]{../lib/Common.h}
+	\subsection{Gestion.h}
+		\lstinputlisting[language=C]{../lib/Gestion.h}
+	\subsection{Gestion.c}
+		\lstinputlisting[language=C]{../src/Gestion.c}
+	\subsection{Boat.h}
+		\lstinputlisting[language=C]{../lib/Boat.h}
+	\subsection{Boat.c}
+		\lstinputlisting[language=C]{../src/Boat.c}
+	\subsection{Port.h}
+		\lstinputlisting[language=C]{../lib/Port.h}
+	\subsection{Port.c}
+		\lstinputlisting[language=C]{../src/Port.c}
+	\subsection{Dock.h}
+		\lstinputlisting[language=C]{../lib/Dock.h}
+	\subsection{Dock.c}
+		\lstinputlisting[language=C]{../src/Dock.c}
+	\subsection{GenVehicle.h}
+		\lstinputlisting[language=C]{../lib/GenVehicle.h}
+	\subsection{GenVehicle.c}
+		\lstinputlisting[language=C]{../src/GenVehicle.c}
 
 \section{Conclusion}
-
+			%
+			%	TODO
+			%
 
 \end{document}
