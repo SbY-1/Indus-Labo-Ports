@@ -23,6 +23,7 @@ int main(int argc, char** argv)
 	sem_gen_v.mode  = 0644;
 	sem_gen_v.value = 0;
 	sprintf(sem_gen_v.semname,"%s%s", SEM_GEN_V, argv[1]);
+	sem_unlink(sem_gen_v.semname);
 	open_sem(&sem_gen_v);
 
 	// Preparing mutex for shm_boat access

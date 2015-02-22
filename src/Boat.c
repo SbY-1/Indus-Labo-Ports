@@ -44,19 +44,19 @@ int main(int argc, char* argv[])
 	attr.mq_msgsize = MQ_MSGSIZE;
 
 	// MQ CAMIONS
-	boat.mq1.oflag = (O_CREAT | O_RDWR | O_NONBLOCK);
-	boat.mq1.mode  = 0666;
+	boat.mq1.oflag = (O_CREAT | O_EXCL | O_RDWR ) | O_NONBLOCK;
+	boat.mq1.mode  = 0644;
 	sprintf(boat.mq1.name,"%s%d", MQ_TRUCKS, index);
 
 	// MQ VOITURES ET CAMIONNETTES
-	boat.mq2.oflag = (O_CREAT | O_RDWR | O_NONBLOCK);
-	boat.mq2.mode  = 0666;
+	boat.mq2.oflag = (O_CREAT | O_EXCL | O_RDWR ) | O_NONBLOCK;
+	boat.mq2.mode  = 0644;
 	sprintf(boat.mq2.name,"%s%d", MQ_CARS_VANS, index);
 
 	mq_unlink(boat.mq1.name);
 	mq_unlink(boat.mq2.name);
-	open_mq(&boat.mq1, attr);
-	open_mq(&boat.mq2, attr);
+	open_mq(&boat.mq1, &attr);
+	open_mq(&boat.mq2, &attr);
 
 	wait_sem(mutex_boat);
 	memcpy(shm_boat.pShm + (index * sizeof(Boat)), &boat, sizeof(Boat));
@@ -110,13 +110,13 @@ int main(int argc, char* argv[])
 				signal_sem(mutex_arr);
 				signal_sem(sem_port);
 
-				//sprintf(msg, "Devant l'entrée de %s", port_name);
-				//print_boat(index, msg);
+				sprintf(msg, "Devant l'entrée de %s", port_name);
+				print_boat(index, msg);
 
 				wait_sem(mutex_sync);
-				printf("### BOAT %d ENTERS_PORT [%s]\n", index, port_name);
-				//sprintf(msg, "Entree dans le port de %s", port_name);
-				//print_boat(index, msg);
+				//printf("### BOAT %d ENTERS_PORT [%s]\n", index, port_name);
+				sprintf(msg, "Entree dans le port de %s", port_name);
+				print_boat(index, msg);
 				boat.position = DOCK;
 				break;
 			}
@@ -148,11 +148,11 @@ int main(int argc, char* argv[])
 				for (i = 0; i < nb_docks && !found; i++)
 				{
 					memcpy(&dock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
-					printf("#[%s]# BOAT_INDEX [%d] == DOCK.BOAT_INDEX [%d] ?\n", port_name, index, dock.boat_index);
+					//printf("#[%s]# BOAT_INDEX [%d] == DOCK.BOAT_INDEX [%d] ?\n", port_name, index, dock.boat_index);
 					if (dock.boat_index == index)
 					{
 						dock_index = dock.index;
-						printf("Index trouvé : %d\n", dock_index);
+						//printf("Index trouvé : %d\n", dock_index);
 						found = 1;
 					}
 				}
@@ -163,8 +163,8 @@ int main(int argc, char* argv[])
 				sem_dock.mode  = 0644;
 				sem_dock.value = 0;
 				sprintf(sem_dock.semname, "%s%s%d", SEM_DOCK, port_name, dock_index);
-				//sprintf(msg, "Sem : %s", sem_dock.semname);
-				//print_boat(index, msg);
+				sprintf(msg, "Sem : %s", sem_dock.semname);
+				print_boat(index, msg);
 				open_sem(&sem_dock);
 
 				// Debloque le quai
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 				// Autorisation pour la sortie du port
 				wait_sem(mutex_sync);
 
-				sprintf(msg, "Leaving the port %s\n", port_name);
+				sprintf(msg, "Quitte le quai");
 				print_boat(index, msg);
 				boat.position = LEAVES_PORT;
 				break;

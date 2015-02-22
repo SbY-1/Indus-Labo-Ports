@@ -16,6 +16,7 @@ int main(int argc, char** argv)
 
 	Boat boat;
 	char* port_name = argv[1];
+	char* msg = malloc(sizeof(msg));
 	int cpt_arr = 0;
 	int cpt_dep = 0;
 	int stop = 0;
@@ -43,7 +44,7 @@ int main(int argc, char** argv)
 	while (!stop)
 	{
 		// En attente de bateau
-		printf("Port %s > En attente de bateau\n", port_name);
+		printf("\tPort %s > En attente de bateau\n", port_name);
 		wait_sem(sem_port);
 
 		// Compteur de depart
@@ -56,7 +57,8 @@ int main(int argc, char** argv)
 			boat = get_actual_boat(LEAVES_PORT, port_name, nb_boats, shm_boat);
 			signal_sem(mutex_boat);
 
-			printf("Port %s > Bateau %d sort\n", port_name, boat.index);
+			sprintf(msg, "Bateau %d sort", boat.index);
+			print_boat(port_name, boat.index, msg);
 			
 			// Décrémente le compteur
 			cpt_dep--;
@@ -79,9 +81,7 @@ int main(int argc, char** argv)
 			wait_sem(mutex_arr);
 			memcpy(&cpt_arr, shm_arr.pShm, sizeof(int));
 			if (cpt_arr > 0)
-			{
-				printf("Port %s > Bateau %d entre\n", port_name, boat.pid);
-			
+			{			
 				// Décrémente le compteur
 				cpt_arr--;
 				memcpy(shm_arr.pShm, &cpt_arr, sizeof(int));
@@ -93,7 +93,8 @@ int main(int argc, char** argv)
 				boat = get_actual_boat(ENTERS_PORT, port_name, nb_boats, shm_boat);
 				signal_sem(mutex_boat);
 
-				printf("Port %s > Réservation pour le bateau %d\n", port_name, boat.index);
+				sprintf(msg, "Bateau %d entre", boat.index);
+				print_boat(port_name, boat.index, msg);
 
 				// TODO Reservation du quai
 				int found = 0;
@@ -102,7 +103,9 @@ int main(int argc, char** argv)
 				{
 					Dock tmpDock;
 					memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
-					printf("Port %s > Bateau - %d Quai %d - %d\n", port_name, boat.index, tmpDock.index, tmpDock.boat_index);
+					//printf("Port %s > Bateau - %d Quai %d - %d\n", port_name, boat.index, tmpDock.index, tmpDock.boat_index);
+					sprintf(msg, "Quai %d", tmpDock.index);
+					print_boat(port_name, boat.index, msg);
 					// Recherche du premier quai disponible
 					if (tmpDock.boat_index == -1)
 					{
@@ -246,6 +249,14 @@ void init_ressources(Semaphore* mutex_boat, Semaphore* sem_port, Semaphore* mute
 
 	open_shm(shm_arr);
 	mapping_shm(shm_arr, sizeof(int));
+}
+
+void print_boat(char* port_name, int boat_index, char* msg)
+{
+	char* color[] = {"\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"};
+	char* reset = "\033[0m";
+
+	printf("\tPort %s > %s%s%s\n", port_name, color[boat_index], msg, reset);
 }
 
 Boat get_actual_boat(boat_p position, char* port, int nb_boats, Shm shm_boat)

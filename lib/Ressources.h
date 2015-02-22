@@ -54,7 +54,7 @@ void mapping_shm(Shm *memPartagee, size_t size);
 void close_shm(Shm memPartagee);
 
 // Mq
-void open_mq(MessageQueue *mq, struct mq_attr attr);
+void open_mq(MessageQueue *mq, struct mq_attr* attr);
 void close_mq(MessageQueue mq);
 void send_mq(mqd_t msgq,const char * message,int taille,unsigned int msg_prio);
 int recv_mq(mqd_t msgq,char * message,int taille,unsigned int *msg_prio);

@@ -126,9 +126,9 @@ void close_shm(Shm memPartagee)
 /**************/
 /*    Mq      */
 /**************/
-void open_mq(MessageQueue *mq, struct mq_attr attr)
+void open_mq(MessageQueue *mq, struct mq_attr* attr)
 {
-	if ((mq->mq = mq_open(mq->name, mq->oflag, mq->mode, &attr)) == -1)
+	if ((mq->mq = mq_open(mq->name, mq->oflag, mq->mode, attr)) == -1)
 	{
 		perror("Ouverture MessageQueue");
 		exit(errno);

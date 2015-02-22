@@ -11,5 +11,6 @@
 #include "Common.h"
 
 void init_ressources(Semaphore* sem_dock, Semaphore* mutex_dock, Shm* shm_dock, char* port_name, int dock_index, int nb_docks);
+void print_boat(char* port_name, int dock_index, int boat_index, char* msg);
 
 #endif /* DOCK_H */

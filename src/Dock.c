@@ -12,38 +12,13 @@ int main(int argc, char** argv)
 	mqd_t mqd_cars_vans;
 	char mq1_name[MQ_NAME_LENGTH];
 	char mq2_name[MQ_NAME_LENGTH];
+	char* port_name = argv[1];
+	char* msg = malloc(sizeof(msg));
 	int dock_index;
 	int nb_docks;
-	int stop = 0, num_read = 0;
+	int stop = 0;
+	int num_read = 0;
 	void *buffer;
-	sscanf(argv[2], "%d", &dock_index);
-	sscanf(argv[3], "%d", &nb_docks);
-
-	// SEM_DOCK
-	sem_dock.oflag = (O_CREAT | O_RDWR);
-	sem_dock.mode  = 0644;
-	sem_dock.value = 0;
-	sprintf(sem_dock.semname,"%s%s%d", SEM_DOCK, argv[1], dock_index);
-
-	// MUTEX_DOCK
-	mutex_dock.oflag = O_RDWR;
-	mutex_dock.mode  = 0644;
-	mutex_dock.value = 1;
-	sprintf(mutex_dock.semname,"%s%s", MUTEX_DOCK, argv[1]);
-
-	// SHM_DOCK
-	shm_dock.sizeofShm = sizeof(Dock) * nb_docks;
-	shm_dock.mode = O_RDWR;
-	sprintf(shm_dock.shmName,"%s%s", SHM_DOCK, argv[1]);
-
-	sem_unlink(sem_dock.semname);
-
-	open_sem(&sem_dock);
-	open_sem(&mutex_dock);
-
-	open_shm(&shm_dock);
-	mapping_shm(&shm_dock, sizeof(Dock) * nb_docks);
-	char* port_name = argv[1];
 
 	sscanf(argv[2], "%d", &dock_index);
 	sscanf(argv[3], "%d", &nb_docks);
@@ -61,14 +36,16 @@ int main(int argc, char** argv)
 	while (!stop)
 	{
 		// Attente d'un bateau
-		printf("%s#Dock#%d waiting on sem_dock = %s\n", port_name, dock_index, sem_dock.semname);
+		printf("\t\t Quai %s %d > En attente %s\n", port_name, dock_index, sem_dock.semname);
 		wait_sem(sem_dock);
 
 		wait_sem(mutex_dock);
 		memcpy(&dock, shm_dock.pShm + (dock_index * sizeof(Dock)), sizeof(Dock));
 		signal_sem(mutex_dock);
 
-		printf("Quai %s %d > Bateau %d a quai \n", argv[1], dock_index, dock.boat_index);
+		//printf("Quai %s %d > Bateau %d a quai \n", port_name, dock_index, dock.boat_index);
+		sprintf(msg, "Bateau %d a quai", dock.boat_index);
+		print_boat(port_name, dock_index, dock.boat_index, msg);
 		// Ouverture MQ --- TODO: refactor with open_mq, ...
 		sprintf(mq1_name, "%s%d", MQ_TRUCKS, dock.boat_index);
 		sprintf(mq2_name, "%s%d", MQ_CARS_VANS, dock.boat_index);
@@ -140,4 +117,12 @@ void init_ressources(Semaphore* sem_dock, Semaphore* mutex_dock, Shm* shm_dock, 
 
 	open_shm(shm_dock);
 	mapping_shm(shm_dock, sizeof(Dock) * nb_docks);
+}
+
+void print_boat(char* port_name, int dock_index, int boat_index, char* msg)
+{
+	char* color[] = {"\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"};
+	char* reset = "\033[0m";
+
+	printf("\t\tQuai %s %d > %s%s%s\n", port_name, dock_index, color[boat_index], msg, reset);
 }
