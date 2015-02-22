@@ -1,0 +1,152 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage[left=1.25in, right=1.25in, top=1.0in, bottom=1.0in]{geometry}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[francais]{babel}
+\usepackage{fontspec}
+\usepackage{amscd} 
+\usepackage{amsfonts}
+\usepackage{color}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{tabularx}
+ \pagestyle{fancy}
+
+%Entêtes et pieds de page
+\fancyhead[C]{Informatique industrielle: Labo 2 Suite}
+\fancyhead[L]{Rahali \& Schmidt}
+\fancyhead[R]{2014-2015}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+
+\lstset{ %
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,                    % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  morekeywords={*,...},            % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2                       % sets default tabsize to 2 spaces
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%							Page de garde						 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\makeatletter
+\def\clap#1{\hbox to 0pt{\hss #1\hss}}%
+\def\ligne#1{%
+\hbox to \hsize{%
+\vbox{\centering #1}}}%
+\def\haut#1#2#3{%
+\hbox to \hsize{%
+\rlap{\vtop{\raggedright #1}}%
+\hss
+\clap{\vtop{\centering #2}}%
+\hss
+\llap{\vtop{\raggedleft #3}}}}%
+\def\bas#1#2#3{%
+\hbox to \hsize{%
+\rlap{\vbox{\raggedright #1}}%
+\hss
+\clap{\vbox{\centering #2}}%
+\hss
+\llap{\vbox{\raggedleft #3}}}}%
+\def\maketitle{%
+\thispagestyle{empty}\vbox to \vsize{%
+\haut{}{\@blurb}{}
+\vfill
+\vspace{1cm}
+\begin{flushleft}
+\usefont{OT1}{ptm}{m}{n}
+\huge \@title
+\end{flushleft}
+\par
+\hrule height 4pt
+\par
+\begin{flushright}
+\usefont{OT1}{phv}{m}{n}
+\Large \@author
+\par
+\end{flushright}
+\vspace{1cm}
+\vfill
+\vfill
+\bas{}{\@location, le \@date}{}
+}%
+\cleardoublepage
+}
+\def\date#1{\def\@date{#1}}
+\def\author#1{\def\@author{#1}}
+\def\title#1{\def\@title{#1}}
+\def\location#1{\def\@location{#1}}
+\def\blurb#1{\def\@blurb{#1}}
+\date{\today}
+\author{}
+\title{}
+\location{Liège}\blurb{}
+\makeatother
+\title{Informatique industrielle: Labo 2 Suite}
+\author{Rahali Nassim \& Schmidt Sébastien -  M18}
+\location{Liège}
+\blurb{%
+Haute Ecole de la Province de Liège
+}%
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Organisation du projet}
+	Pour la réalisation de ce projet, nous avons essayé au maximum de scinder le programme en parties. Nous aurions pu créer un seul fichier de code source mais la compréhension du code en aurait pâti. C'est la raison pour laquelle une série de processus a été créés afin de rendre le code compréhensible. 
+	
+	De plus, les processus vont se créer automatiquement, il n'y aura pas besoin de lancer les processus manuellement. On peut considérer le processus Gestion comme le père des processus. Il aura pour tâche de lancer X processus Bateau et Y processus Port. Le port créera ensuite ses propres processus Quai et son processus GenVehicle. Le nombre de processus bateau et Port à lancer sera spécifier dans un fichier de configuration qui sera lu au démarrage de l'application.
+	
+\section{Structures de données}
+	Pour ce projet, nous avons défini deux structures de données: Une pour les bateaux et une pour les quais. Ces structures seront contenues dans des mémoire partagées accessibles par tous les processus.
+	\subsection{Structure pour les bateaux}
+		\lstinputlisting[language=C, firstline=21, lastline=33]{../lib/Common.h}
+		Dans un premier temps, on a défini deux énumération pour la direction ainsi que la position du bateau. Ces énumération seront utilisées dans la structure. Par rapport au point de vue théorique, nous avons rajouté deux données: l'index du bateau ainsi qu'un indicateur pour savoir si les données ont été modifiées ou pas. Cette données est uniquement utilisées pour l'affichage et n'a donc pas grand intérêt. La mémoire partagée aura une taille égale à 6 fois la taille de cette structure.
+	\subsection{Structure pour les quais}
+		\lstinputlisting[language=C, firstline=35, lastline=39]{../lib/Common.h}
+		Chaque port possède X quais, les informations essentielles de ces quais seront contenues dans une mémoire partagée par port. Dans cette structure, on spécifiera l'index du quai ainsi que le bateau qui y est actuellement accosté. Si aucun bateau n'est présent le boat\_index vaudra -1 et sera libre.	
+
+\section{Les différents processus}
+	\subsection{Processus Gestion}
+		Comme spécifié précédemment, ce processus va créé des processus fils grâce à la fonction fork(). On va ensuite exécuter un fichier grâce a la fonction execl qui peut également passer des arguments à ce processus. Aux processus Bateau, on leur fournira leur numéro d'index: Comme il y a 6 bateaux, chaque processus aura un index compris entre 0 et 5. Ce numéro sera utilisé par le processus Quai et Port afin de savoir quel bateau est sur le point de rentrer dans le port ou d'accoster. Quant au processus Port, on lui fournir le nom de son port (Calais, Dunkerque ou Douvre) afin de notamment savoir le nombre de quais que le port possède mais également pour créer des sémaphores. En effet les ports ont besoin de sémaphores uniques: on va dans ce cas utiliser le nom du port concaténé à un nom de sémaphore commun pour avoir un nom de sémaphore unique et facilement retrouvable pour les autres processus qui en auront besoin (comme le bateau lors de son entrée).
+		
+			\lstinputlisting[language=C, firstline=43, lastline=75]{../src/Gestion.c}
+	\subsection{Processus Bateau}
+	
+	\subsection{Processus Port}
+	
+	\subsection{Processus Quai}
+	
+	\subsection{Processus GenVehicle}
+
+\section{Conclusion}
+
+
+\end{document}
