@@ -5,13 +5,14 @@ OBJ      = obj
 
 BINS = $(BINDIR)/Gestion $(BINDIR)/Port $(BINDIR)/Dock $(BINDIR)/Boat $(BINDIR)/GenVehicle
 
+OBJCOMM	= $(OBJ)/Common.o
 OBJRESS = $(OBJ)/Ressources.o
 OBJGEST = $(OBJ)/Gestion.o
 OBJPORT = $(OBJ)/Port.o
 OBJDOCK = $(OBJ)/Dock.o
 OBJBOAT = $(OBJ)/Boat.o
 OBJVEHI = $(OBJ)/GenVehicle.o
-OBJS = $(OBJGEST) $(OBJPORT) $(OBJDOCK) $(OBJBOAT) $(OBJVEHI) $(OBJRESS)
+OBJS = $(OBJGEST) $(OBJPORT) $(OBJDOCK) $(OBJBOAT) $(OBJVEHI) $(OBJRESS) $(OBJCOMM)
 
 CFLAGS = $(INCLUDES)
 INCLUDES = -I $(LIB)
@@ -21,29 +22,33 @@ LD = gcc
 
 all: $(BINS)
 
+$(OBJ)/Common.o: $(SRC)/Common.c
+	@echo ">> Creating $@"
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(OBJ)/Ressources.o: $(SRC)/Ressources.c
 	@echo ">> Creating $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BINDIR)/Gestion:	$(OBJGEST)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h $(SRC)/Common.c -o $@ $(LDFLAGS)
 
 $(BINDIR)/Port:	$(OBJPORT)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h $(SRC)/Common.c -o $@ $(LDFLAGS)
 
 $(BINDIR)/Dock: $(OBJDOCK)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h $(SRC)/Common.c -o $@ $(LDFLAGS)
 
 $(BINDIR)/Boat: $(OBJBOAT)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h $(SRC)/Common.c -o $@ $(LDFLAGS)
 
 $(BINDIR)/GenVehicle: $(OBJVEHI)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h $(SRC)/Common.c -o $@ $(LDFLAGS)
 
 $(OBJ)/Gestion.o: $(SRC)/Gestion.c
 	@echo ">> Creating $@"

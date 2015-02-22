@@ -24,7 +24,6 @@ int main(int argc, char* argv[])
 	struct mq_attr attr;
 	struct sigaction act;
 	char* msg = malloc(sizeof(msg));
-	act.sa_handler = handler;
 
 	srand(getpid());
 
@@ -36,7 +35,7 @@ int main(int argc, char* argv[])
 	boat.index = index;
 	boat.position = SEA;
 	boat.direction = UNDEFINED;
-	boat.state_changed = 0;
+	boat.waiting = 0;
 	
 	attr.mq_curmsgs = 0;
 	attr.mq_flags = 0;
@@ -73,10 +72,14 @@ int main(int argc, char* argv[])
 
 		switch(boat.position)
 		{
+			/* ***********************************************/
+			/*						SEA						 */
+			/* ***********************************************/
 			case SEA:
 				// Premier voyage 
 				if (boat.direction == UNDEFINED)
 					boat.direction = rand() % 3 + 1;
+					
 				// Les bateaux viennent d'un port
 				else
 				{
@@ -94,10 +97,11 @@ int main(int argc, char* argv[])
 				print_boat(index, msg);
 				sleep(duration);
 
-				boat.state_changed = 1;
 				boat.position = ENTERS_PORT;
 				break;
-
+			/* ***********************************************/
+			/*					ENTERS_PORT					 */
+			/* ***********************************************/
 			case ENTERS_PORT:
 			{	
 				// Récupération des ressources du port
@@ -120,23 +124,14 @@ int main(int argc, char* argv[])
 				boat.position = DOCK;
 				break;
 			}
+			/* ***********************************************/
+			/*						DOCK					 */
+			/* ***********************************************/
 			case DOCK:
 			{
 				int nb_docks = (strcmp(port_name, "Douvre") == 0) ? 3 : 2;
+				
 				// Création ressouces du quai
-				mutex_dock.oflag = O_RDWR;
-				mutex_dock.mode  = 0644;
-				mutex_dock.value = 1;
-				sprintf(mutex_dock.semname,"%s%s", MUTEX_DOCK, port_name);
-				open_sem(&mutex_dock);
-
-				// SHM_DOCK
-				shm_dock.sizeofShm = sizeof(Dock) * nb_docks;
-				shm_dock.mode = O_RDWR;
-				sprintf(shm_dock.shmName,"%s%s", SHM_DOCK, port_name);
-
-				open_shm(&shm_dock);
-				mapping_shm(&shm_dock, sizeof(Dock) * nb_docks);
 				open_dock_ressources(&mutex_dock, &shm_dock, port_name, nb_docks);
 
 				// Recherche de l'id du quai
@@ -148,11 +143,11 @@ int main(int argc, char* argv[])
 				for (i = 0; i < nb_docks && !found; i++)
 				{
 					memcpy(&dock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
-					//printf("#[%s]# BOAT_INDEX [%d] == DOCK.BOAT_INDEX [%d] ?\n", port_name, index, dock.boat_index);
+					printf("#[%s]# BOAT_INDEX [%d] == DOCK.BOAT_INDEX [%d] ?\n", port_name, index, dock.boat_index);
 					if (dock.boat_index == index)
 					{
 						dock_index = dock.index;
-						//printf("Index trouvé : %d\n", dock_index);
+						printf("Index trouvé : %d\n", dock_index);
 						found = 1;
 					}
 				}
@@ -178,6 +173,9 @@ int main(int argc, char* argv[])
 				boat.position = LEAVES_PORT;
 				break;
 			}
+			/* ***********************************************/
+			/*					LEAVES_PORT					 */
+			/* ***********************************************/
 			case LEAVES_PORT:
 
 				wait_sem(mutex_dep);
@@ -303,9 +301,4 @@ void print_boat(int index, char* msg)
 	char* reset = "\033[0m";
 
 	printf("Bateau %d> %s%s%s\n", index, color[index], msg, reset);
-}
-
-void handler(int sig)
-{
-	printf("Signal recu %d\n", sig);
 }

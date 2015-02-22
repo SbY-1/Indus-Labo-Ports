@@ -1,6 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "Ressources.h"
 
 #define PROP_FILE	"../Config.cfg"
@@ -34,7 +38,7 @@ typedef struct Boat_t
 	int index;
 	boat_p position;
 	boat_d direction;
-	int state_changed;
+	int waiting;
 	MessageQueue mq1;
 	MessageQueue mq2;
 } Boat;
@@ -44,5 +48,7 @@ typedef struct Dock_t
 	int index;
 	int boat_index;
 } Dock;
+
+char* getProp(const char *fileName, const char *propName);
 
 #endif /* COMMON_H */

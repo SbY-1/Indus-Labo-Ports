@@ -19,6 +19,7 @@ int main(int argc, char** argv)
 	char* msg = malloc(sizeof(msg));
 	int cpt_arr = 0;
 	int cpt_dep = 0;
+	int found = 0;
 	int stop = 0;
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
  	int nb_docks = 0;
@@ -47,7 +48,9 @@ int main(int argc, char** argv)
 		printf("\tPort %s > En attente de bateau\n", port_name);
 		wait_sem(sem_port);
 
-		// Compteur de depart
+		/* ************************************************ */
+		/*						DEPART						*/
+		/* ************************************************ */
 		wait_sem(mutex_dep);
 		memcpy(&cpt_dep, shm_dep.pShm, sizeof(int));
 		if (cpt_dep > 0)
@@ -66,13 +69,61 @@ int main(int argc, char** argv)
 
 			signal_sem(mutex_dep);
 
+			// Libère le quai occupé par le bateau
+			wait_sem(mutex_dock);
+			for (i = 0, found = 0; i < nb_docks && !found; i++)
+			{
+				Dock tmpDock;
+				memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
+				// Recherche du quai disponible
+				if (tmpDock.boat_index == boat.index)
+				{
+					tmpDock.boat_index = -1;
+					memcpy(shm_dock.pShm + (i * sizeof(Dock)), &tmpDock, sizeof(Dock));
+					found = 1;
+				}
+			}
+			signal_sem(mutex_dock);
+
 			// Autorise le bateau à sortir
 			mutex_sync.oflag = 0;
 			sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
 			open_sem(&mutex_sync);
 			signal_sem(mutex_sync);
 			close_sem(mutex_sync);
+
+			// Reagarde si un bateau n'est pas en attente pour rentrer
+			wait_sem(mutex_boat);
+			boat = get_waiting_boat(port_name, nb_boats, shm_boat);
+			signal_sem(mutex_boat);
+
+			if (boat.index != -1)
+			{
+				printf("###### Bateau débloqué %d ############\n", boat.index);
+				
+				wait_sem(mutex_boat);
+				boat.waiting = 0;
+				memcpy(shm_boat.pShm + (boat.index * sizeof(Boat)), &boat, sizeof(Boat));
+				signal_sem(mutex_boat);
+
+				// Reservation du quai
+				book_dock(mutex_dock, shm_dock, boat, nb_docks);
+
+				// Envoie d'un signal au bateau
+				mutex_sync.oflag = O_RDWR;
+				mutex_sync.mode  = 0644;
+				mutex_sync.value = 1;
+				sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
+
+				open_sem(&mutex_sync);
+				sleep(1);
+				signal_sem(mutex_sync);
+				close_sem(mutex_sync);
+			}
 		}
+		/* ************************************************ */
+		/*						ARRIVEE						*/
+		/* ************************************************ */
 		else
 		{
 			signal_sem(mutex_dep);
@@ -97,15 +148,14 @@ int main(int argc, char** argv)
 				print_boat(port_name, boat.index, msg);
 
 				// TODO Reservation du quai
-				int found = 0;
 				wait_sem(mutex_dock);
-				for (i = 0; i < nb_docks && !found; i++)
+				for (i = 0, found = 0; i < nb_docks && !found; i++)
 				{
 					Dock tmpDock;
 					memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
-					//printf("Port %s > Bateau - %d Quai %d - %d\n", port_name, boat.index, tmpDock.index, tmpDock.boat_index);
-					sprintf(msg, "Quai %d", tmpDock.index);
+					sprintf(msg, "Quai %d Bateau :%d", tmpDock.index, tmpDock.boat_index);
 					print_boat(port_name, boat.index, msg);
+
 					// Recherche du premier quai disponible
 					if (tmpDock.boat_index == -1)
 					{
@@ -116,17 +166,28 @@ int main(int argc, char** argv)
 				}
 				signal_sem(mutex_dock);
 
-				// Envoie d'un signal au bateau
-				//kill(boat.pid, SIGUSR1);
-				mutex_sync.oflag = O_RDWR;
-				mutex_sync.mode  = 0644;
-				mutex_sync.value = 1;
-				sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
+				// Place trouvée dans le port
+				if (found)
+				{
+					// Envoie d'un signal au bateau
+					mutex_sync.oflag = O_RDWR;
+					mutex_sync.mode  = 0644;
+					mutex_sync.value = 1;
+					sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
 
-				open_sem(&mutex_sync);
-				sleep(1);
-				signal_sem(mutex_sync);
-				close_sem(mutex_sync);
+					open_sem(&mutex_sync);
+					sleep(1);
+					signal_sem(mutex_sync);
+					close_sem(mutex_sync);
+				}
+				// Port complet
+				else
+				{
+					wait_sem(mutex_boat);
+					boat.waiting = 1;
+					memcpy(shm_boat.pShm + (boat.index * sizeof(Boat)), &boat, sizeof(Boat));
+					signal_sem(mutex_boat);	
+				}
 			}
 			else
 				signal_sem(mutex_arr);
@@ -251,14 +312,6 @@ void init_ressources(Semaphore* mutex_boat, Semaphore* sem_port, Semaphore* mute
 	mapping_shm(shm_arr, sizeof(int));
 }
 
-void print_boat(char* port_name, int boat_index, char* msg)
-{
-	char* color[] = {"\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"};
-	char* reset = "\033[0m";
-
-	printf("\tPort %s > %s%s%s\n", port_name, color[boat_index], msg, reset);
-}
-
 Boat get_actual_boat(boat_p position, char* port, int nb_boats, Shm shm_boat)
 {
 	// Parcours de la shm pour trouver le bateau concerné
@@ -290,47 +343,63 @@ Boat get_actual_boat(boat_p position, char* port, int nb_boats, Shm shm_boat)
 	return *tmp;
 }
 
-char* getProp(const char *fileName, const char *propName)
+Boat get_waiting_boat(char* port, int nb_boats, Shm shm_boat)
 {
-	FILE* 	file = NULL;
-	char* 	token = NULL;
-	char 	line[128];
-	char	sep[2] = "=";
-	int 	i;
-	int 	loginFound = 0;
+	// Parcours de la shm pour trouver le bateau concerné
+	int i;
+	int found;
+	char* ports_name[] = {"Douvre", "Calais", "Dunkerque"};
+	Boat tmp;
+	boat_d direction;
 
-	if ((file = fopen(fileName, "r")) == NULL)
+	// Recherche le nom du port pour l'enum
+	for (i = 0, found = 0; i < 3 && !found; i++)
 	{
-		perror("Opening file\n");
-		exit(errno);
-	}
-	else
-	{
-      	while (fgets(line, sizeof line, file) != NULL)
-      	{
-   			token = strtok(line, sep);
-			i = 0;
-
-  			while(token != NULL) 
-   			{
-				if (i == 0)
-				{
-					if (strcmp(token, propName) == 0)
-						loginFound++;
-				}
-				else if (i != 0 && loginFound == 1)
-				{
-					char *password = malloc(sizeof(char *) * 30);
-					strcpy(password, token);
-					fclose(file);
-					return password;
-				}
-      			token = strtok(NULL, sep);
-				i++;
-   			}
-     	}
+		if (strcmp(port, ports_name[i]) == 0)
+		{
+			found = 1;
+			direction = i + 1;
+		}
 	}
 
-	fclose(file);
-	return NULL;
+	// Recherche le bateau aux portes du port
+	for (i = 0; i < nb_boats; i++)
+	{
+		memcpy(&tmp, shm_boat.pShm + (i * sizeof(Boat)), sizeof(Boat));
+		if (tmp.position == ENTERS_PORT && tmp.direction == direction && tmp.waiting == 1)
+			return tmp;
+	}	
+
+	tmp.index = -1;	
+	return tmp;
+}
+
+void book_dock(Semaphore mutex_dock, Shm shm_dock, Boat boat, int nb_docks)
+{
+	int found;
+	int i;
+
+	wait_sem(mutex_dock);
+	for (i = 0, found = 0; i < nb_docks && !found; i++)
+	{
+		Dock tmpDock;
+		memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
+
+		// Recherche du premier quai disponible
+		if (tmpDock.boat_index == -1)
+		{
+			tmpDock.boat_index = boat.index;
+			memcpy(shm_dock.pShm + (i * sizeof(Dock)), &tmpDock, sizeof(Dock));
+			found = 1;
+		}
+	}
+	signal_sem(mutex_dock);
+}
+
+void print_boat(char* port_name, int boat_index, char* msg)
+{
+	char* color[] = {"\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"};
+	char* reset = "\033[0m";
+
+	printf("\tPort %s > %s%s%s\n", port_name, color[boat_index], msg, reset);
 }

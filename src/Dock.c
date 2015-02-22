@@ -43,9 +43,9 @@ int main(int argc, char** argv)
 		memcpy(&dock, shm_dock.pShm + (dock_index * sizeof(Dock)), sizeof(Dock));
 		signal_sem(mutex_dock);
 
-		//printf("Quai %s %d > Bateau %d a quai \n", port_name, dock_index, dock.boat_index);
 		sprintf(msg, "Bateau %d a quai", dock.boat_index);
 		print_boat(port_name, dock_index, dock.boat_index, msg);
+
 		// Ouverture MQ --- TODO: refactor with open_mq, ...
 		sprintf(mq1_name, "%s%d", MQ_TRUCKS, dock.boat_index);
 		sprintf(mq2_name, "%s%d", MQ_CARS_VANS, dock.boat_index);
@@ -61,30 +61,41 @@ int main(int argc, char** argv)
 			perror("Erreur when mq_getattr\n");
 		}
 		buffer = malloc(attr1.mq_msgsize);
-		printf("[DEBARQUEMENT]\n");
-		printf("CURMSGS TRUCKS: %ld\n", attr1.mq_curmsgs);
+
+		// Début du débarquement
+		sprintf(msg, "Debut debarquement");
+		print_boat(port_name, dock_index, dock.boat_index, msg);
+
+		// Débarquement des camions
+		sprintf(msg, "Debarquement de %ld camions", attr1.mq_curmsgs);
+		print_boat(port_name, dock_index, dock.boat_index, msg);
 		if(attr1.mq_curmsgs > 0)
 		{
 			while(num_read != -1)
 			{
 				num_read = mq_receive(mqd_trucks, buffer, attr1.mq_msgsize, NULL);
-				printf("Sortie de %s\n", (char *)buffer);
 				nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 			}
 		}
 		num_read = 0;
-		printf("CURMSGS CARS & VANS: %ld\n", attr2.mq_curmsgs);
+
+		// Débarquement des voitures/vans
+		sprintf(msg, "Debarquement de %ld voitures/vans", attr2.mq_curmsgs);
+		print_boat(port_name, dock_index, dock.boat_index, msg);
 		if(attr2.mq_curmsgs > 0)
 		{
 			while(num_read != -1)
 			{
 				num_read = mq_receive(mqd_cars_vans, buffer, attr2.mq_msgsize, NULL);
-				printf("Sortie de %s\n", (char *)buffer);
 				nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 			}
 		}
+		sprintf(msg, "Fin debarquement");
+		print_boat(port_name, dock_index, dock.boat_index, msg);
+
+		// Signal à GenVehicle pour l'embarquement
 		sem_gen_v.oflag = 0;
-		sprintf(sem_gen_v.semname,"%s%s", SEM_GEN_V, argv[1]);
+		sprintf(sem_gen_v.semname,"%s%s", SEM_GEN_V, port_name);
 		open_sem(&sem_gen_v);
 		signal_sem(sem_gen_v);
 	}

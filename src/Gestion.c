@@ -2,6 +2,9 @@
 
 int main()
 {
+	Semaphore mutex_boat;
+	Shm shm_boat;
+
 	int i;
 	int stop = 0;
 	int nb_ports = atoi(getProp(PROP_FILE, "nb_ports"));
@@ -27,17 +30,6 @@ int main()
 
 	open_shm(&shm_boat);
 	mapping_shm(&shm_boat, sizeof(Boat) * nb_boats);
-
-	/*for (i = 0; i < 10; i++)
-	{
-		wait_sem(mutex_boat);
-		printf("Test de section\n");
-		signal_sem(mutex_boat);
-	}*/
-	
-
-	// Création des ressources nécessaires
-	//init_ressources(nb_boats);
 
 	// Création des bateaux
 	for (i = 0; i < nb_boats; i++)
@@ -74,88 +66,8 @@ int main()
 		}
 	}
 
-	// Lecture des données
-	Boat tmpBoat;
-	while (!stop)
-	{
-		for (i = 0; i < nb_boats; i++)
-		{
-			wait_sem(mutex_boat);
-			memcpy(&tmpBoat, shm_boat.pShm + (i * sizeof(Boat)), sizeof(Boat));
-			if (tmpBoat.state_changed == 1)
-			{
-				//printf("Boat %d - pid = %d - position : %d - direction %d - state %d\n", i, tmpBoat.pid, tmpBoat.position, tmpBoat.direction, tmpBoat.state_changed);
-
-				tmpBoat.state_changed = 0;
-				memcpy(shm_boat.pShm + (i * sizeof(Boat)), &tmpBoat, sizeof(Boat));
-			}
-			signal_sem(mutex_boat);
-		}
-	}
+	while(1)
+		pause();
 
 	return EXIT_SUCCESS;
-}
-
-void init_ressources(int nb_boats)
-{
-	// MUTEX_BATEAU
-	/*mutex_boat.oflag = (O_CREAT | O_RDWR);
-    mutex_boat.mode  = 0600;
-    mutex_boat.value = 1;
-    strcpy(mutex_boat.semname, MUTEX_BOAT);
-
-	open_sem(&mutex_boat);
-
-	// SHM_BATEAU
-	shm_boat.sizeofShm = sizeof(Boat) * nb_boats;
-	shm_boat.mode = O_CREAT | O_RDWR;
-	strcpy(shm_boat.shmName, SHM_BOAT);
-
-	open_shm(&shm_boat);
-	mapping_shm(&shm_boat, sizeof(Boat) * nb_boats);*/
-}
-
-char* getProp(const char *fileName, const char *propName)
-{
-	FILE* 	file = NULL;
-	char* 	token = NULL;
-	char 	line[128];
-	char	sep[2] = "=";
-	int 	i;
-	int 	loginFound = 0;
-
-	if ((file = fopen(fileName, "r")) == NULL)
-	{
-		perror("Opening file\n");
-		exit(errno);
-	}
-	else
-	{
-      	while (fgets(line, sizeof line, file) != NULL)
-      	{
-   			token = strtok(line, sep);
-			i = 0;
-
-  			while(token != NULL) 
-   			{
-				if (i == 0)
-				{
-					if (strcmp(token, propName) == 0)
-						loginFound++;
-				}
-				else if (i != 0 && loginFound == 1)
-				{
-					char *password = malloc(sizeof(char *) * 30);
-					strcpy(password, token);
-					fclose(file);
-					return password;
-				}
-      			token = strtok(NULL, sep);
-				i++;
-   			}
-     	}
-	}
-
-	fclose(file);
-	return NULL;
 }

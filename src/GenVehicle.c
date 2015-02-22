@@ -12,6 +12,8 @@ int main(int argc, char** argv)
 	mqd_t mqd_cars_vans;
 
 	char buffer[MQ_MSGSIZE];
+	char* port_name = argv[1];
+	char* msg = malloc(sizeof(msg));
 	int i = 0;
 	int nb_trucks = 0, nb_cars = 0, nb_vans = 0;
 	int nb_boats = atoi(getProp(PROP_FILE, "nb_boats"));
@@ -22,7 +24,7 @@ int main(int argc, char** argv)
 	sem_gen_v.oflag = (O_CREAT | O_RDWR);
 	sem_gen_v.mode  = 0644;
 	sem_gen_v.value = 0;
-	sprintf(sem_gen_v.semname,"%s%s", SEM_GEN_V, argv[1]);
+	sprintf(sem_gen_v.semname,"%s%s", SEM_GEN_V, port_name);
 	sem_unlink(sem_gen_v.semname);
 	open_sem(&sem_gen_v);
 
@@ -44,11 +46,14 @@ int main(int argc, char** argv)
 	{
 		// Waiting signal_sem on sem_gen_v from Docks processes.
 		wait_sem(sem_gen_v);
-		printf("---> GEN VEHICLE FOR %s UNLOCKED\n", argv[1]);
+
 		// Waiting for access on shm_boat
 		wait_sem(mutex_boat);
-		boat = get_actual_boat(DOCK, argv[1], nb_boats, shm_boat);
+		boat = get_actual_boat(DOCK, port_name, nb_boats, shm_boat);
 		signal_sem(mutex_boat);
+
+		sprintf(msg, "Débloqué");
+		print_boat(port_name, boat.index, msg);
 
 		// MUTEX_SYNC
 		mutex_sync.oflag = 0;
@@ -64,7 +69,12 @@ int main(int argc, char** argv)
 		nb_trucks = rand()% MAX_N_TRUCKS + 1;
 
 		memset(buffer, 0, MQ_MSGSIZE);
-		printf("[BEGINNING BOARDING] > Boat %d\n", boat.index);
+		sprintf(msg, "Debut embarquement");
+		print_boat(port_name, boat.index, msg);
+
+		sprintf(msg, "Embarquement de %d voitures", nb_cars);
+		print_boat(port_name, boat.index, msg);
+
 		for(i = 0; i < nb_cars; i++)
 		{
 			sprintf(buffer, "Car %d", i + 1);
@@ -75,11 +85,12 @@ int main(int argc, char** argv)
 				perror("Error occured when mq_send (cars & vans)\n");
 				exit(EXIT_FAILURE);
 			}
-			printf("%s on board\n", buffer);
 			// Sleep 1/4s -- TODO Paramétrable.
 			nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 		}
-		printf("\t%d cars entered the boat %d.\n", nb_cars, boat.index);
+
+		sprintf(msg, "Embarquement de %d vans", nb_vans);
+		print_boat(port_name, boat.index, msg);
 		for(i = 0; i < nb_vans; i++)
 		{
 			sprintf(buffer, "Van %d", i);
@@ -90,11 +101,12 @@ int main(int argc, char** argv)
 				perror("Error occured when mq_send (cars & vans)\n");
 				exit(EXIT_FAILURE);
 			}
-			printf("%s on board\n", buffer);
 			// Sleep 1/4s
 			nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 		}
-		printf("\t%d vans entered the boat %d.\n", nb_cars, boat.index);
+
+		sprintf(msg, "Embarquement de %d camions", nb_trucks);
+		print_boat(port_name, boat.index, msg);
 		for(i = 0; i < nb_trucks; i++)
 		{
 			sprintf(buffer, "Truck %d", i + 1);
@@ -105,19 +117,28 @@ int main(int argc, char** argv)
 				perror("Error occured when mq_send (trucks)\n");
 				exit(EXIT_FAILURE);
 			}
-			printf("%s on board\n", buffer);
 			nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 		}
-		printf("\t%d trucks entered the boat %d.\n", nb_trucks, boat.index);
-		printf("[ENDING BOARDING] for Boat [%d]", boat.index);
+		sprintf(msg, "Fin embarquement");
+		print_boat(port_name, boat.index, msg);
+
 		// Récupération de la mutex_sync
 		mutex_sync.oflag = 0;
 		sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
+
 		// Signal le bateau qu'il peut y aller
 		signal_sem(mutex_sync);
 	}
 
 	return 0;
+}
+
+void print_boat(char* port_name, int boat_index, char* msg)
+{
+	char* color[] = {"\x1B[31m", "\x1B[32m", "\x1B[33m", "\x1B[34m", "\x1B[35m", "\x1B[36m"};
+	char* reset = "\033[0m";
+
+	printf("GenVehicle %s > %s%s%s\n", port_name, color[boat_index], msg, reset);
 }
 
 // NB : Dupliquées de Port.c
@@ -150,49 +171,4 @@ Boat get_actual_boat(boat_p position, char* port, int nb_boats, Shm shm_boat)
 	}	
 	
 	return tmp;
-}
-
-char* getProp(const char *fileName, const char *propName)
-{
-	FILE* 	file = NULL;
-	char* 	token = NULL;
-	char 	line[128];
-	char	sep[2] = "=";
-	int 	i;
-	int 	loginFound = 0;
-
-	if ((file = fopen(fileName, "r")) == NULL)
-	{
-		perror("Opening file\n");
-		exit(errno);
-	}
-	else
-	{
-		while (fgets(line, sizeof line, file) != NULL)
-		{
-			token = strtok(line, sep);
-			i = 0;
-
-			while(token != NULL) 
-			{
-				if (i == 0)
-				{
-					if (strcmp(token, propName) == 0)
-					loginFound++;
-				}
-				else if (i != 0 && loginFound == 1)
-				{
-					char *password = malloc(sizeof(char *) * 30);
-					strcpy(password, token);
-					fclose(file);
-					return password;
-				}
-				token = strtok(NULL, sep);
-				i++;
-			}
-		}
-	}
-
-	fclose(file);
-	return NULL;
 }
