@@ -9,14 +9,18 @@ void open_sem(Semaphore *sem)
 	{
 		if((sem->p_sem = sem_open(sem->semname, sem->oflag)) == SEM_FAILED)
 		{
-			perror("Semaphore opening");
+			printf("Tried to open  : %s\n", sem->semname);
+			perror("Semaphore opening error");
+			exit(errno);
 		}
 	}
 	else
 	{
 		if ((sem->p_sem = sem_open(sem->semname, sem->oflag, sem->mode, sem->value)) == SEM_FAILED)
 		{
-			perror("Semaphore initialisation");
+			printf("Tried to open  : %s\n", sem->semname);
+			perror("Semaphore opening error");
+			exit(errno);
 		}
 	}
 }

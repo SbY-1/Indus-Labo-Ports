@@ -23,8 +23,6 @@ int main(int argc, char** argv)
 	sem_gen_v.mode  = 0644;
 	sem_gen_v.value = 0;
 	sprintf(sem_gen_v.semname,"%s%s", SEM_GEN_V, argv[1]);
-
-	sem_unlink(sem_gen_v.semname);
 	open_sem(&sem_gen_v);
 
 	// Preparing mutex for shm_boat access
@@ -44,9 +42,8 @@ int main(int argc, char** argv)
 	while(1)
 	{
 		// Waiting signal_sem on sem_gen_v from Docks processes.
-		printf("\t\t---> GEN VEHICLE waiting\n");
 		wait_sem(sem_gen_v);
-		printf("\t\t---> GEN VEHICLE STARTING GEN");
+		printf("---> GEN VEHICLE FOR %s UNLOCKED\n", argv[1]);
 		// Waiting for access on shm_boat
 		wait_sem(mutex_boat);
 		boat = get_actual_boat(DOCK, argv[1], nb_boats, shm_boat);
@@ -65,7 +62,8 @@ int main(int argc, char** argv)
 		nb_vans = rand() % MAX_N_VANS + 1;
 		nb_trucks = rand()% MAX_N_TRUCKS + 1;
 
-		printf("\t[BEGINNING BOARDING] > Boat %d\n", boat.pid);
+		memset(buffer, 0, MQ_MSGSIZE);
+		printf("[BEGINNING BOARDING] > Boat %d\n", boat.index);
 		for(i = 0; i < nb_cars; i++)
 		{
 			sprintf(buffer, "Car %d", i + 1);
@@ -76,10 +74,11 @@ int main(int argc, char** argv)
 				perror("Error occured when mq_send (cars & vans)\n");
 				exit(EXIT_FAILURE);
 			}
+			printf("%s on board\n", buffer);
 			// Sleep 1/4s -- TODO Paramétrable.
 			nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 		}
-		printf("\t%d cars entered the boat %d.\n", nb_cars, boat.pid);
+		printf("\t%d cars entered the boat %d.\n", nb_cars, boat.index);
 		for(i = 0; i < nb_vans; i++)
 		{
 			sprintf(buffer, "Van %d", i);
@@ -90,10 +89,11 @@ int main(int argc, char** argv)
 				perror("Error occured when mq_send (cars & vans)\n");
 				exit(EXIT_FAILURE);
 			}
+			printf("%s on board\n", buffer);
 			// Sleep 1/4s
 			nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 		}
-		printf("\t%d vans entered the boat %d.\n", nb_cars, boat.pid);
+		printf("\t%d vans entered the boat %d.\n", nb_cars, boat.index);
 		for(i = 0; i < nb_trucks; i++)
 		{
 			sprintf(buffer, "Truck %d", i + 1);
@@ -104,11 +104,16 @@ int main(int argc, char** argv)
 				perror("Error occured when mq_send (trucks)\n");
 				exit(EXIT_FAILURE);
 			}
+			printf("%s on board\n", buffer);
 			nanosleep((struct timespec[]){{0, 250000000}}, NULL);
 		}
-		printf("\t%d trucks entered the boat %d.\n", nb_cars, boat.pid);
-		printf("\t[ENDING BOARDING] > Boat %d", boat.pid);
-		
+		printf("\t%d trucks entered the boat %d.\n", nb_trucks, boat.index);
+		printf("[ENDING BOARDING] for Boat [%d]", boat.index);
+		// Récupération de la mutex_sync
+		mutex_sync.oflag = 0;
+		sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
+		// Signal le bateau qu'il peut y aller
+		signal_sem(mutex_sync);
 	}
 
 	return 0;

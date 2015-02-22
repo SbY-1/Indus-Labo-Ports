@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 			boat = get_actual_boat(LEAVES_PORT, port_name, nb_boats, shm_boat);
 			signal_sem(mutex_boat);
 
-			printf("Port %s > Bateau %d sort\n", port_name, boat.pid);
+			printf("Port %s > Bateau %d sort\n", port_name, boat.index);
 			
 			// Décrémente le compteur
 			cpt_dep--;
@@ -64,46 +64,16 @@ int main(int argc, char** argv)
 
 			signal_sem(mutex_dep);
 
-			// Envoie d'un signal au bateau
-			//kill(boat.pid, SIGUSR2);
-			mutex_sync.oflag = O_RDWR;
-			mutex_sync.mode  = 0644;
-			mutex_sync.value = 1;
+			// Autorise le bateau à sortir
+			mutex_sync.oflag = 0;
 			sprintf(mutex_sync.semname,"%s%d", MUTEX_SYNC, boat.index);
-
 			open_sem(&mutex_sync);
-			sleep(1);
 			signal_sem(mutex_sync);
 			close_sem(mutex_sync);
 		}
 		else
 		{
 			signal_sem(mutex_dep);
-
-			// Recherche du bateau
-			wait_sem(mutex_boat);
-			boat = get_actual_boat(ENTERS_PORT, port_name, nb_boats, shm_boat);
-			signal_sem(mutex_boat);
-
-			printf("Port %s > Réservation pour le bateau %d\n", port_name, boat.index);
-
-			// TODO Reservation du quai
-			int found = 0;
-			wait_sem(mutex_dock);
-			for (i = 0; i < nb_docks && !found; i++)
-			{
-				Dock tmpDock;
-				memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
-				printf("Port %s > Bateau - %d Quai %d - %d\n", port_name, boat.index, tmpDock.index, tmpDock.boat_index);
-				// Recherche du premier quai disponible
-				if (tmpDock.boat_index == -1)
-				{
-					tmpDock.boat_index = boat.index;
-					memcpy(shm_dock.pShm + (i * sizeof(Dock)), &tmpDock, sizeof(Dock));
-					found = 1;
-				}
-			}
-			signal_sem(mutex_dock);
 
 			// Compteur d'arrivée
 			wait_sem(mutex_arr);
@@ -117,6 +87,31 @@ int main(int argc, char** argv)
 				memcpy(shm_arr.pShm, &cpt_arr, sizeof(int));
 
 				signal_sem(mutex_arr);
+
+				// Recherche du bateau
+				wait_sem(mutex_boat);
+				boat = get_actual_boat(ENTERS_PORT, port_name, nb_boats, shm_boat);
+				signal_sem(mutex_boat);
+
+				printf("Port %s > Réservation pour le bateau %d\n", port_name, boat.index);
+
+				// TODO Reservation du quai
+				int found = 0;
+				wait_sem(mutex_dock);
+				for (i = 0; i < nb_docks && !found; i++)
+				{
+					Dock tmpDock;
+					memcpy(&tmpDock, shm_dock.pShm + (i * sizeof(Dock)), sizeof(Dock));
+					printf("Port %s > Bateau - %d Quai %d - %d\n", port_name, boat.index, tmpDock.index, tmpDock.boat_index);
+					// Recherche du premier quai disponible
+					if (tmpDock.boat_index == -1)
+					{
+						tmpDock.boat_index = boat.index;
+						memcpy(shm_dock.pShm + (i * sizeof(Dock)), &tmpDock, sizeof(Dock));
+						found = 1;
+					}
+				}
+				signal_sem(mutex_dock);
 
 				// Envoie d'un signal au bateau
 				//kill(boat.pid, SIGUSR1);
