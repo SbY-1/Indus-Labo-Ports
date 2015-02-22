@@ -183,11 +183,13 @@ Haute Ecole de la Province de Liège
 			\item Une SHM relative aux quais.
 			\item Une sémaphore pour le processus de générations de véhicules.
 		\end{itemize}
+		Il dispose également d'une variable de type Dock permettant de stocker les informations relatives à lui même depuis la SHM des quais.
+		\lstinputlisting[language=C, firstline=28, lastline=34]{../src/Dock.c}
 		Il entre ensuite dans une boucle dans laquelle il commence par attendre sur sa sémaphore quai. Celle ci sera signalée par un bateau en temps voulu.
-		\lstinputlisting[language=C, firstline=36, lastline=41]{../src/Dock.c}
-		Quand un processus Quai est signalé, le bateau est à quai et la première chose que le processus va réaliser est d'ouvrir les Messages Queues de ce bateau.
+		\lstinputlisting[language=C, firstline=36, lastline=44]{../src/Dock.c}
+		Quand un processus Quai est signalé, le bateau est à quai. On peut donc récupérer son index (disponible via la SHM des quais et stockée dans la variable Dock). On peut alors réaliser l'ouverture les Messages Queues de ce bateau.
 		\lstinputlisting[language=C, firstline=52, lastline=53]{../src/Dock.c}
-		De manière logique, il s'agit alors de réaliser le débarquement. Ceci est réalisé de la manière suivante : on récupère d'abord le nombre de messages dans les Messages Queues, puis une fois ces valeurs obtenues, on consomme les messages des deux Messages Queues (une pour les Camions et l'autre pour les Voitures des Camionnettes donc).
+		De manière logique, il s'agit alors de réaliser le débarquement. Ceci est réalisé de la manière suivante : on récupère d'abord le nombre de messages dans les Messages Queues, puis une fois ces valeurs obtenues, on consomme les messages des deux Messages Queues (une pour les Camions et l'autre pour les Voitures et Camionnettes).
 		\lstinputlisting[language=C, firstline=59, lastline=62]{../src/Dock.c}
 		\lstinputlisting[language=C, firstline=66, lastline=85]{../src/Dock.c}
 		Avant de repartir sur un nouveau tour de boucle, le processus Quai va signaler la sémaphore relative à la génération de véhicules ce qui va permettre de remplir à nouveau les Messages Queues du bateau avant son départ. Notons aussi que le débarquement réalisé par un processus Quai peut prendre un certain temps (0.25 secondes par véhicules).
@@ -214,16 +216,12 @@ Haute Ecole de la Province de Liège
 		\lstinputlisting[language=C, firstline=16, lastline=18]{../lib/GenVehicle.h}
 		Quand ces valeurs sont générées, il reste donc à remplir les Messages Queues ce qui est donc fait par la fonction \texttt{mq\_send()}. Si on prend par exemple le remplissage de la Message Queue représentant les camionnettes et les voitures :
 		\lstinputlisting[language=C, firstline=68, lastline=96]{../src/GenVehicle.c}
-		On peut constater que les voitures entrent d'abord et que les camionnettes suivent. On remarquera également les deux priorités diffèrent et sont en fait des constantes définies dans le header de \textit{GenVehicle.c}.
+		On peut constater que les voitures entrent d'abord et que les camionnettes suivent (NB : ici aussi, 0,25s par véhicule pour l'embarquement). On remarquera également les deux priorités diffèrent et sont en fait des constantes définies dans le header de \textit{GenVehicle.c}.
 		\lstinputlisting[language=C, firstline=13, lastline=14]{../lib/GenVehicle.h}
-		Et les camionnettes ayant une priorité plus elevée seront bien celles qui débarqueront en premier dans le quai. La dernière étape est donc de prévenir le bateau qui l'embarquement est terminé et lui permettre donc de prendre son état suivant :
+		Les camionnettes ayant une priorité plus elevée seront bien celles qui débarqueront en premier dans le quai. La dernière étape est donc de prévenir le bateau qui attend que l'embarquement soit terminé et de lui permettre de prendre son état suivant :
 		\lstinputlisting[language=C, firstline=113, lastline=117]{../src/GenVehicle.c}
-		Après quoi le processus repart pour une boucle.
+		Après quoi le processus de génération repart, content de ses prouesses, pour une nouvelle boucle.
 
-\section{Test du programme}
-			%
-			%	TODO
-			%
 \section{Code source}
 	\subsection{Config.cfg}
 		\lstinputlisting[language=C]{../Config.cfg}
