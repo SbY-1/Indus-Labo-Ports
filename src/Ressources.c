@@ -5,10 +5,19 @@
 /**************/
 void open_sem(Semaphore *sem)
 {
-	if ((sem->p_sem = sem_open(sem->semname, sem->oflag, sem->mode, sem->value)) == SEM_FAILED)
+	if (sem->oflag == 0)
 	{
-		perror("Semaphore initialisation");
-		exit(errno);
+		if((sem->p_sem = sem_open(sem->semname, sem->oflag)) == SEM_FAILED)
+		{
+			perror("Semaphore opening");
+		}
+	}
+	else
+	{
+		if ((sem->p_sem = sem_open(sem->semname, sem->oflag, sem->mode, sem->value)) == SEM_FAILED)
+		{
+			perror("Semaphore initialisation");
+		}
 	}
 }
 

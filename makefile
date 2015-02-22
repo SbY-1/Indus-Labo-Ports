@@ -43,7 +43,7 @@ $(BINDIR)/Boat: $(OBJBOAT)
 
 $(BINDIR)/GenVehicle: $(OBJVEHI)
 	@echo "=> Creating $@"
-	$(LD) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(LD) $(CFLAGS) $^ $(LIB)/Ressources.h $(SRC)/Ressources.c $(LIB)/Common.h -o $@ $(LDFLAGS)
 
 $(OBJ)/Gestion.o: $(SRC)/Gestion.c
 	@echo ">> Creating $@"
