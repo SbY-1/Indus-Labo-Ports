@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-//#include "Ressources.h"
+#include "Ressources.h"
 #include "Common.h"
 
 char* getProp(const char *fileName, const char *propName);

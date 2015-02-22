@@ -21,6 +21,7 @@ int main(int argc, char* argv[])
 	sscanf(argv[1], "%d", &index);
 	int stop = 0;
 	Boat boat;
+	struct mq_attr attr;
 	struct sigaction act;
 	char* msg = malloc(sizeof(msg));
 	act.sa_handler = handler;
@@ -49,6 +50,23 @@ int main(int argc, char* argv[])
 	boat.direction = UNDEFINED;
 	boat.state_changed = 0;
 	
+	attr.mq_curmsgs = 0;
+	attr.mq_flags = 0;
+	attr.mq_maxmsg = MQ_MAXSIZE;
+	attr.mq_msgsize = MQ_MSGSIZE;
+
+	// MQ CAMIONS
+	boat.mq1.oflag = (O_CREAT | O_RDWR);
+	boat.mq1.mode  = 0666;
+	sprintf(boat.mq1.name,"%s%d", MQ_TRUCKS, index);
+	open_mq(&boat.mq1, attr);
+
+	// MQ VOITURES ET CAMIONNETTES
+	boat.mq2.oflag = (O_CREAT | O_RDWR);
+	boat.mq2.mode  = 0666;
+	sprintf(boat.mq2.name,"%s%d", MQ_CARS_VANS, index);
+	open_mq(&boat.mq2, attr);
+	
 	wait_sem(mutex_boat);
 	memcpy(shm_boat.pShm + (index * sizeof(Boat)), &boat, sizeof(Boat));
 	signal_sem(mutex_boat);
@@ -56,6 +74,7 @@ int main(int argc, char* argv[])
 	while (!stop)
 	{
 		// Lecture de l'état du bateau
+		sleep(1);
 		wait_sem(mutex_boat);
 		memcpy(&boat, shm_boat.pShm + (index * sizeof(Boat)), sizeof(Boat));
 		signal_sem(mutex_boat);
@@ -119,9 +138,22 @@ int main(int argc, char* argv[])
 				print_boat(index, msg);
 
 				// Création ressouces du quai
+				mutex_dock.oflag = O_RDWR;
+				mutex_dock.mode  = 0644;
+				mutex_dock.value = 1;
+				sprintf(mutex_dock.semname,"%s%s", MUTEX_DOCK, port_name);
+				open_sem(&mutex_dock);
+
+				// SHM_DOCK
+				shm_dock.sizeofShm = sizeof(Dock) * nb_docks;
+				shm_dock.mode = O_RDWR;
+				sprintf(shm_dock.shmName,"%s%s", SHM_DOCK, port_name);
+
+				open_shm(&shm_dock);
+				mapping_shm(&shm_dock, sizeof(Dock) * nb_docks);
 				open_dock_ressources(&mutex_dock, &shm_dock, port_name, nb_docks);
 
-				// Recherche de l'id du quai				
+				// Recherche de l'id du quai
 				int i;
 				int dock_index;
 				int found = 0;
@@ -142,21 +174,21 @@ int main(int argc, char* argv[])
 
 				// Création de la sémaphore correspondante
 				sem_dock.oflag = O_RDWR;
-			    sem_dock.mode  = 0644;
-			    sem_dock.value = 0;
-			    sprintf(sem_dock.semname, "%s%s%d", SEM_DOCK, port_name, dock_index);
-				
+				sem_dock.mode  = 0644;
+				sem_dock.value = 0;
+				sprintf(sem_dock.semname, "%s%s%d", SEM_DOCK, port_name, dock_index);
+
 				sprintf(msg, "Sem : %s", sem_dock.semname);
 				print_boat(index, msg);
-				open_sem(&sem_dock);		
+				open_sem(&sem_dock);
 
 				// Debloque le quai
 				signal_sem(sem_dock);
 
-				// TODO Reception d'un signal autorisant la sortie du port
-				pause();
+				// Autorisation pour la sortie du port
+				wait_sem(mutex_sync);
 
-				sprintf(msg, "Fin Embarquement");
+				sprintf(msg, "Leaving the port %s\n", port_name);
 				print_boat(index, msg);
 				boat.position = LEAVES_PORT;
 				break;
@@ -199,18 +231,18 @@ void init_ressources(Semaphore* mutex_sync, Semaphore* mutex_boat, Shm* shm_boat
 {
 	// MUTEX_SYNC
 	mutex_sync->oflag = (O_CREAT | O_RDWR);
-    mutex_sync->mode  = 0644;
-    mutex_sync->value = 1;
-    sprintf(mutex_sync->semname,"%s%d", MUTEX_SYNC, index);
-	
+	mutex_sync->mode  = 0644;
+	mutex_sync->value = 1;
+	sprintf(mutex_sync->semname,"%s%d", MUTEX_SYNC, index);
+
 	sem_unlink(mutex_sync->semname);
 	open_sem(mutex_sync);
 
 	// MUTEX_BATEAU
 	mutex_boat->oflag = O_RDWR;
-    mutex_boat->mode  = 0644;
-    mutex_boat->value = 1;
-    strcpy(mutex_boat->semname, MUTEX_BOAT);
+	mutex_boat->mode  = 0644;
+	mutex_boat->value = 1;
+	strcpy(mutex_boat->semname, MUTEX_BOAT);
 
 	open_sem(mutex_boat);
 
